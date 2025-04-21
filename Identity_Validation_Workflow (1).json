@@ -1,0 +1,1084 @@
+{
+  "name": "Identity Validation Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "events": [
+          "payment_intent.created",
+          "checkout.session.completed",
+          "charge.succeeded",
+          "radar.early_fraud_warning.created",
+          "radar.early_fraud_warning.updated"
+        ]
+      },
+      "type": "n8n-nodes-base.stripeTrigger",
+      "typeVersion": 1,
+      "position": [
+        860,
+        -920
+      ],
+      "id": "dd6a22d7-7e2d-4408-b423-9add41063ac0",
+      "name": "Stripe Trigger",
+      "webhookId": "c7407eb4-ee0b-4e07-97ea-976d5db01594",
+      "credentials": {
+        "stripeApi": {
+          "id": "Ll4QrVFWYAVUai26",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pluggy.ai/auth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"clientId\": \"962a0189-c685-40e4-87af-cdfecc7d662d\",\n  \"clientSecret\": \"720875e2-fbce-4935-8ce5-030ea9632e0d\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        -180
+      ],
+      "id": "48a5fdc9-d797-49e5-82bb-326311caa1b6",
+      "name": "HTTP - Create Access Token"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pluggy.ai/users",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.apiKey}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"institutionId\":  \"ID_DA_SUA_INSTITUICAO_NO_PLUGGY\",\n  \"login\": {\n    \"username\": \"={{ $('Stripe Trigger').item.json.data.object.customer_details.email }}\",\n    \"password\": \"1234\"\n  },\n  \"clientUserId\": \"={{ $('Stripe Trigger').item.json.data.object.customer }}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1460,
+        -180
+      ],
+      "id": "0e3d1319-91c6-45f2-9141-716a294fdcdb",
+      "name": "HTTP - Criar Usuário"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.pluggy.ai/users/{{ $('Stripe Trigger').item.json.data.object.customer }}/accounts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.apiKey }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        -180
+      ],
+      "id": "af6165d4-ea62-4285-89ad-9dc6b9607517",
+      "name": "HTTP - Get User Data",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "uHd3g55i0G7A3lqx",
+          "name": "Pluggy Client"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Pluggy",
+        "height": 260,
+        "width": 940
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        940,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "e38c2a3b-3f56-41bd-9d47-616bbf89e2d5",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "url": "https://api.pluggy.ai/connectors",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.apiKey }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        -180
+      ],
+      "id": "bcab78dd-8359-4eea-8465-6855729e21a6",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cc27b2d9-8de7-43ca-a741-2d150084f78e",
+              "name": "currentStartIndex",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "fc552c57-4510-4f04-aa09-2294306d0d9f",
+              "name": "maxPages",
+              "value": 10,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        -480
+      ],
+      "id": "9212f086-0a9a-4976-b8ec-51c9a74550e0",
+      "name": "Set Fields"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/customsearch/v1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyBDrlzGBrHgUWPJ4e3e_6vXrVih-3QAxEg"
+            },
+            {
+              "name": "cx",
+              "value": "REDACTED_CX_ID"
+            },
+            {
+              "name": "q",
+              "value": "={{$node[\"HTTP - Get User Data STRIPE\"].json.name}} site:linkedin.com/in"
+            },
+            {
+              "name": "start",
+              "value": "={{ $runIndex == 0 ? $node[\"Set Fields\"].json.currentStartIndex : $node[\"Pagination Check\"].json.startIndex }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        -480
+      ],
+      "id": "faa42c2b-e2cf-468b-9b9c-fe7ebeedd4c3",
+      "name": "Search Google"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the response data\nconst response = $input.first().json;\nconst items = response.items || [];\n\n// Track pagination info\nlet nextStartIndex = 1;\nif (response.queries && response.queries.nextPage && response.queries.nextPage[0]) {\n  nextStartIndex = response.queries.nextPage[0].startIndex;\n}\n\n// Calculate if we should continue (Google only allows up to 100 results)\nconst hasMoreResults = nextStartIndex <= 100;\n\n// Process the items and include pagination info in each item\nconst results = items.map(item => {\n  const titleParts = item.title.split(\" - \");\n  return {\n    name: titleParts[0] || null,\n    title: titleParts.slice(1).join(\" - \") || null,\n    link: item.link || null,\n    snippet: item.snippet || null,\n    image: item.pagemap?.cse_thumbnail?.[0]?.src || null,\n    // Add pagination info to each item\n    startIndex: nextStartIndex,\n    hasMoreResults: hasMoreResults\n  };\n});\n\n// If there are no results, return at least one item with pagination info\nif (results.length === 0) {\n  return [{ \n    json: {\n      name: null,\n      title: null,\n      link: null,\n      snippet: null,\n      image: null,\n      startIndex: nextStartIndex,\n      hasMoreResults: false\n    }\n  }];\n}\n\n// Return the processed results\nreturn results.map(r => ({ json: r }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        -480
+      ],
+      "id": "c3eefd70-2c41-4855-a54c-1d82b4955bc6",
+      "name": "Extract Results"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REDACTED_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "linkedin",
+          "cachedResultUrl": "REDACTED_GOOGLE_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "REDACTED_SHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $json.name }}",
+            "title": "={{ $json.title }}",
+            "link": "={{ $json.link }}",
+            "snippet": "={{ $json.snippet }}",
+            "image": "={{ $json.image }}",
+            "results": "={{ $json.hasMoreResults }}",
+            "index": "={{ $json.startIndex }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "snippet",
+              "displayName": "snippet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "image",
+              "displayName": "image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "index",
+              "displayName": "index",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "results",
+              "displayName": "results",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1520,
+        -480
+      ],
+      "id": "52156d06-3a68-467d-a28e-3d130ab71572",
+      "name": "Add to Google",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "sB1aql0AeLGhaFKL",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst inputItems = $input.all();\nconsole.log(\"Input items count:\", inputItems.length);\n\n// Extract pagination values with fallbacks\nlet nextStartIndex = 1;\nlet hasMoreResults = false;\n\n// Try different approaches to find the pagination info\nif (inputItems && inputItems.length > 0) {\n  const firstItem = inputItems[0];\n  \n  // Check direct properties\n  if (firstItem.json) {\n    console.log(\"First item JSON:\", JSON.stringify(firstItem.json));\n    \n    // Check for \"index\" property (instead of startIndex)\n    if (firstItem.json.index !== undefined) {\n      nextStartIndex = firstItem.json.index;\n      console.log(\"Found index:\", nextStartIndex);\n    }\n    \n    // Check for \"results\" property (instead of hasMoreResults)\n    if (firstItem.json.results !== undefined) {\n      hasMoreResults = firstItem.json.results;\n      console.log(\"Found results:\", hasMoreResults);\n    }\n  }\n}\n\n// Return pagination control info\nreturn {\n  json: {\n    continueLoop: hasMoreResults,\n    startIndex: nextStartIndex\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        -480
+      ],
+      "id": "b458bab0-6eef-4cf7-b62b-a8dd043e26b2",
+      "name": "Pagination"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "faef2862-80a4-465b-9e0b-be5b9753dcbd",
+              "leftValue": "={{ $json.continueLoop }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1880,
+        -480
+      ],
+      "id": "af871719-6f0f-4ff7-a3e1-de603043ecb7",
+      "name": "Pagination Check"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        -480
+      ],
+      "id": "2e6ce8e5-a46f-4b09-82ae-762877a73f97",
+      "name": "Wait",
+      "webhookId": "d3bbbd53-2135-45e5-a847-aad35b1c518e"
+    },
+    {
+      "parameters": {
+        "content": "Linkedin",
+        "height": 260,
+        "width": 1300,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        800,
+        -560
+      ],
+      "typeVersion": 1,
+      "id": "3c2aa91a-45cb-43bf-ae54-071abc899745",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Fluxo para Apresentar",
+        "height": 260,
+        "width": 1300
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -980
+      ],
+      "id": "12e69fcd-11c9-448d-b155-1494f6c155eb",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.stripe.com/v1/customers/{{$node[\"Stripe Trigger\"].json[\"data\"][\"object\"][\"customer\"]}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk_test_51RFgJPPOVt6rt7Bj1fcV9UDnogFDGrkCRXkO1wkftdFO1a7pZQBZo2uZrS1Zo0uVzZJVifShq0qRYY29Ygi2OcpD00aeON6yXs"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        -920
+      ],
+      "id": "4a70403f-0e4c-4e8f-96e2-5f4233635974",
+      "name": "HTTP - Get User Data STRIPE"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1l3kXm7bIwfOvmm4guQHtMHSCAngcfWYsQmLm63TPYKA",
+          "mode": "list",
+          "cachedResultName": "Data_Experimentaí",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l3kXm7bIwfOvmm4guQHtMHSCAngcfWYsQmLm63TPYKA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 362923154,
+          "mode": "list",
+          "cachedResultName": "Experimentaí_data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l3kXm7bIwfOvmm4guQHtMHSCAngcfWYsQmLm63TPYKA/edit#gid=362923154"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1300,
+        -920
+      ],
+      "id": "723fee2c-701f-4a37-b2a9-87e4a29003bf",
+      "name": "Google Sheets",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "sB1aql0AeLGhaFKL",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Com base nas informações do usuário que coletei na planilha, quero que me conte sobre quem ele é:\n- {{ $json.nome }}\n- {{ $json.sobrenome }}\n- {{ $json.data_nascimento }}\n- {{ $json.celular_completo }}\n- {{ $json.cidade }}\n- {{ $json.faixa_renda }}\n- interesses:\n - moda: {{ $json.moda }}\n- pessoa_artistica: {{ $json.pessoa_artistica }}\n- maquiagem: {{ $json.maquiagem }}\n- brinquedos ou jogos: {{ $json.brinquedos_ou_jogos }}\n- esportes: {{ $json.esportes }}\n- tem_pet: {{ $json.tem_pet }}\n- decorar casa {{ $json.decorar_casa }}\n- alimento_saudavel: {{ $json.alimento_saudavel }}\n- gastronomia: {{ $json.gastronomia }}\n- carro: {{ $json.carro }}\n- bebida alcoolica: {{ $json.bebida_alcoolica }}\n- cuidados pessoais: {{ $json.cuidados_pessoais }}\n- tecnologia: {{ $json.tecnologia }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1480,
+        -920
+      ],
+      "id": "e4a5658a-954b-4fde-b5d0-9b968260a671",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "9mMgKxtNRsZ590r7",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "8029183066",
+        "text": "={{ $json.message.content }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1840,
+        -920
+      ],
+      "id": "7855fea0-9217-4a34-af81-7085a9d5585a",
+      "name": "Telegram",
+      "webhookId": "2dc6f5c1-c505-4ed0-9222-deefab16b62b",
+      "credentials": {
+        "telegramApi": {
+          "id": "LstDqnltHSlChzXx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "essay",
+        "options": {}
+      },
+      "id": "a36cff5e-8221-47de-8419-2bb26310367b",
+      "name": "Split out into items",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        -900,
+        300
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "title",
+              "cssSelector": "title"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "979ffc2c-fee3-4c82-be8f-3141ee124f87",
+      "name": "Extract title",
+      "type": "n8n-nodes-base.html",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "operationMode": "documentLoader",
+        "options": {}
+      },
+      "id": "cdf55435-2efd-40c8-8a19-1be58367c398",
+      "name": "Summarization Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
+      "position": [
+        0,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b337b47-a1c6-470e-881f-0c038b4917e5",
+              "name": "title",
+              "type": "string",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "id": "ca820521-4fff-4971-84b5-e6e2dbd8bb7a",
+              "name": "summary",
+              "type": "string",
+              "value": "={{ $json.response.text }}"
+            },
+            {
+              "id": "0fd9b5e3-44dd-49a3-82c1-3a4aa4698376",
+              "name": "url",
+              "type": "string",
+              "value": "=http://www.paulgraham.com/{{ $('x count').first().json.essay }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "00d977c5-6315-4e2a-b9c2-53f367d7887e",
+      "name": "Clean up",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        700,
+        300
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "8dada1df-602e-4c9b-a247-febf63171da8",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        500,
+        300
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $('Extract Text Only').item.json.data }}",
+        "options": {}
+      },
+      "id": "0b3c0b55-c68e-4ccd-86dc-ff5da721425d",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "position": [
+        80,
+        520
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "chunkSize": 6000,
+        "options": {}
+      },
+      "id": "49f47227-570e-430a-8261-89d84bd2c68f",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "position": [
+        160,
+        640
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "data",
+              "cssSelector": "body",
+              "skipSelectors": "img,nav"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d208ea78-af15-4890-9799-3a337bac61bf",
+      "name": "Extract Text Only",
+      "type": "n8n-nodes-base.html",
+      "position": [
+        -180,
+        300
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "url": "https://x.com/?lang=en",
+        "options": {}
+      },
+      "id": "9c0675e4-1e92-4952-b315-8a2bcb3edaac",
+      "name": "HTTPS",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -1300,
+        300
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "essay",
+              "cssSelector": "table table a",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f0e6dce3-31a1-4afc-9655-b91db5e7a9ea",
+      "name": "Account seg",
+      "type": "n8n-nodes-base.html",
+      "position": [
+        -1100,
+        300
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "maxItems": 10
+      },
+      "id": "c5c01205-ef51-4237-b37b-4c47b6bff3f9",
+      "name": "x count",
+      "type": "n8n-nodes-base.limit",
+      "position": [
+        -700,
+        300
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "url": "=http://www.paulgraham.com/{{ $json.essay }}",
+        "options": {}
+      },
+      "id": "eb4c410e-fdcd-4d05-a2a5-2194e98b54bf",
+      "name": "x list",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -500,
+        300
+      ],
+      "typeVersion": 4.2
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Stripe Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP - Get User Data STRIPE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - Create Access Token": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - Criar Usuário": {
+      "main": [
+        [
+          {
+            "node": "HTTP - Get User Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP - Criar Usuário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Fields": {
+      "main": [
+        [
+          {
+            "node": "Search Google",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Google": {
+      "main": [
+        [
+          {
+            "node": "Extract Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Results": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to Google": {
+      "main": [
+        [
+          {
+            "node": "Pagination",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pagination": {
+      "main": [
+        [
+          {
+            "node": "Pagination Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pagination Check": {
+      "main": [
+        [
+          {
+            "node": "Search Google",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Add to Google",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - Get User Data STRIPE": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split out into items": {
+      "main": [
+        [
+          {
+            "node": "x count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract title": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarization Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Clean up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Summarization Chain",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text Only": {
+      "main": [
+        [
+          {
+            "node": "Summarization Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTPS": {
+      "main": [
+        [
+          {
+            "node": "Account seg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Account seg": {
+      "main": [
+        [
+          {
+            "node": "Split out into items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "x count": {
+      "main": [
+        [
+          {
+            "node": "x list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "x list": {
+      "main": [
+        [
+          {
+            "node": "Extract title",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Text Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "a2daa84f-b7ad-4982-b50e-1d57b47a6db5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "05cafd9bf52e28dde61bb5079978013c08a7ffbeca30a8879c24634d96c45e57"
+  },
+  "id": "5j5CExpcIffTDM3e",
+  "tags": [
+    {
+      "createdAt": "2025-04-20T07:35:05.064Z",
+      "updatedAt": "2025-04-20T07:35:05.064Z",
+      "id": "emTr625xcOT9NcKU",
+      "name": "youtube"
+    }
+  ]
+}
